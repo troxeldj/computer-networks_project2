@@ -41,4 +41,8 @@ public class Message {
   public String toString() {
     return this.messageId + " " + this.author + " " + this.timestamp + " " + this.message;
   }
+
+  public String toStringNoContent() {
+    return this.messageId + " " + this.author + " " + this.timestamp;
+  }
 }

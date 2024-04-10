@@ -103,7 +103,7 @@ public class ClientHandler implements Runnable {
         closeEverything(sock, buffRead, buffWrite);
         break;
 
-      case "%users":
+      case "%groupusers":
         if (!clientInGroup()) { // Client is not in group
           sendMessageToThisClient("You are not in a group. Please join a group to see users.");
           break;
@@ -152,7 +152,7 @@ public class ClientHandler implements Runnable {
           break;
         }
         Message newMessage = addMessageToGroupMessageList(message);
-        sendBroadcastMessage(newMessage.toString());
+        sendBroadcastMessage(newMessage.toStringNoContent());
         break;
     }
   }
@@ -260,7 +260,7 @@ public class ClientHandler implements Runnable {
   private void sendLastTwoMessages() {
     ArrayList<Message> lastTwoMessages = getLastTwoMessages();
     for (Message message : lastTwoMessages) {
-      sendMessageToThisClient(message.toString());
+      sendMessageToThisClient(message.toStringNoContent());
     }
   }
 
@@ -290,11 +290,14 @@ public class ClientHandler implements Runnable {
   // Returns: void
   private void sendHelpMessage() {
     sendMessageToThisClient("List of commands:");
-    sendMessageToThisClient("%users: List all clients in group.");
-    sendMessageToThisClient("%message <id>: Retrieve message by id");
+    sendMessageToThisClient("%groupusers: List all users in group.");
+    sendMessageToThisClient("%groupjoin <group_name>: Join a group.");
+    sendMessageToThisClient("%groupleave: Leave current group.");
+    sendMessageToThisClient("%groups: List all groups.");
+    sendMessageToThisClient("%message <id>: Retrieve message content given id");
     sendMessageToThisClient("%ping: Check connection to server.");
     sendMessageToThisClient("%help: List all commands");
-    sendMessageToThisClient("%exit: Exit the chat");
+    sendMessageToThisClient("%exit: Exit the chat application");
   }
 
   // Function to run the client handler thread to listen for messages
@@ -313,6 +316,7 @@ public class ClientHandler implements Runnable {
         handleClientmessage(clientMessage); // dispatch the message to the appropriate handler
       } catch (Exception e) {
         removeClient();
+        closeEverything(sock, buffRead, buffWrite);
       }
     }
   }

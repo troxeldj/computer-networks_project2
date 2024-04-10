@@ -77,7 +77,7 @@ public class Client {
         }
         sendMessageToServer(fullMessageString);
         break;
-      
+
       // Handle '%groupjoin <group_name>' to join a group.
       case "%groupjoin":
         if (commandLength != 2) {
@@ -86,7 +86,7 @@ public class Client {
         }
         sendMessageToServer(fullMessageString);
         break;
-      
+
       // Handle '%groupleave' to leave a group.
       case "%groupleave":
         if (commandLength != 1) {
@@ -95,7 +95,7 @@ public class Client {
         }
         sendMessageToServer(fullMessageString);
         break;
-      
+
       // Handle '%help' to print help message.
       case "%help":
         if (commandLength != 1) {
@@ -104,7 +104,7 @@ public class Client {
         }
         sendMessageToServer(fullMessageString);
         break;
-      
+
       // Handle '%groups' to get list of groups.
       case "%groups":
         if (commandLength != 1) {
@@ -113,11 +113,20 @@ public class Client {
         }
         sendMessageToServer(fullMessageString);
         break;
-      
-      // Handle '%users' to get list of users.
-      case "%users":
+
+      case "%clear":
         if (commandLength != 1) {
-          System.out.println("Invalid command format. Please use '%users'");
+          System.out.println("Invalid command format. Please use '%clear'");
+          break;
+        }
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+        break;
+
+      // Handle '%users' to get list of users.
+      case "%groupusers":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use '%groupusers'");
           break;
         }
         sendMessageToServer(fullMessageString);
