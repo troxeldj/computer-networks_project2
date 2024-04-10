@@ -226,6 +226,7 @@ public class Client {
       Client newClient = new Client(socket, username);
       newClient.listenForMessages();
       newClient.sendMessage();
+      System.out.println("Server connection aborted.");
     } catch (Exception e) {
       e.printStackTrace();
     }
