@@ -22,6 +22,8 @@ public class Group {
     groupMsgList.add(message);
   }
 
+  // Getters
+
   // Function to get group name
   // Returns: String
   public String getGroupName() {

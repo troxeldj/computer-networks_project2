@@ -38,10 +38,14 @@ public class Message {
     return this.messageId;
   }
 
+  // ToString methods
+
+  // Returns the message in the format: messageId author timestamp message
   public String toString() {
     return this.messageId + " " + this.author + " " + this.timestamp + " " + this.message;
   }
 
+  // Returns the message in the format: messageId author timestamp (no message content)
   public String toStringNoContent() {
     return this.messageId + " " + this.author + " " + this.timestamp;
   }

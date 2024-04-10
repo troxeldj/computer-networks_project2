@@ -13,6 +13,15 @@ public class User {
     this.groupName = "";
   }
 
+  // Getters
+  public String getGroupName() {
+    return groupName;
+  }
+
+  public String getUsername() {
+    return username;
+  }
+
   // Function to add group to the user group list
   // Arguments: String groupName
   // Returns: void
@@ -25,15 +34,5 @@ public class User {
   // Returns: void
   public void leaveGroup() {
     groupName = "";
-  }
-
-  public String getGroupName() {
-    return groupName;
-  }
-
-  // Function to get username
-  // Returns: String
-  public String getUsername() {
-    return username;
   }
 }

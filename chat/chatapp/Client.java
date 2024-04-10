@@ -27,6 +27,7 @@ public class Client {
     }
   }
 
+  // Function to send message to the server. Runs while connection is not closed.
   public void sendMessage() {
     try {
       buffWrite.write(username);
@@ -47,7 +48,6 @@ public class Client {
       }
     } catch (Exception e) {
       closeEverything(sock, buffRead, buffWrite);
-      Thread.currentThread().interrupt();
     }
   }
 
@@ -138,6 +138,7 @@ public class Client {
     }
   }
 
+  // Thread to listen for messages from the server. Runs while connection is not closed.
   public void listenForMessages() {
     new Thread(new Runnable() {
       @Override
@@ -183,7 +184,7 @@ public class Client {
     return message.equals("%exit");
   }
 
-  // Function to handle exit message. If the message is "exit", close the socket
+  // Function to handle exit message. If the message is "exit", close the socket.
   // and exit the program.
   // Arguments: String message
   // Returns: void
@@ -193,6 +194,9 @@ public class Client {
     System.exit(0);
   }
 
+  // Function to send message to server over socket.
+  // Arguments: String message
+  // Returns: void
   private void sendMessageToServer(String message) {
     try {
       buffWrite.write(message);
@@ -203,6 +207,9 @@ public class Client {
     }
   }
 
+  // Function to check if a string can be parsed as an integer
+  // Arguments: String s
+  // Returns: boolean
   private boolean isInteger(String s) {
     try {
       Integer.parseInt(s);
