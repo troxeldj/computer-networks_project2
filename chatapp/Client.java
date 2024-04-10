@@ -36,31 +36,95 @@ public class Client {
       Scanner sysInScanner = new Scanner(System.in);
       while (sock.isConnected()) {
         String messageToSend = sysInScanner.nextLine();
-        // Handle 'message <message_id>' to retrieve message from server.
-        if (isRetrieveMessage(messageToSend) && isValidRetrieveMessage(messageToSend)) {
-          handleretrieveMessage(messageToSend);
-          continue;
-        } else if (isRetrieveMessage(messageToSend) && !isValidRetrieveMessage(messageToSend)) {
-          System.out.println("Invalid command format. Please use 'message <message_id>'");
-          continue;
-        }
 
-        // Send the message to the server.
-        buffWrite.write(messageToSend);
-        buffWrite.newLine();
-        buffWrite.flush();
+        handleClientCommand(messageToSend);
 
         // Handle exit message
         if (isExitMessage(messageToSend)) {
           handleExitMessage(messageToSend);
           continue;
         }
-
-        // Handle message to retrieve message from server
-        // Handle exit message
       }
     } catch (Exception e) {
       closeEverything(sock, buffRead, buffWrite);
+    }
+  }
+
+  // Function to handle client command. If the command is not a special command,
+  // send the message to the server.
+  // Arguments: String fullMessageString
+  // Returns: void
+  public void handleClientCommand(String fullMessageString) {
+    String[] splitCommand = fullMessageString.split(" ");
+    String command = splitCommand[0];
+    int commandLength = splitCommand.length;
+
+    switch (command) {
+      case "%message":
+        // Handle '%message <message_id>' to retrieve message from server.
+        if (commandLength == 2 && isInteger(splitCommand[1])) {
+          sendMessageToServer(fullMessageString);
+        } else {
+          System.out.println("Invalid command format. Please use '%message <message_id>'");
+        }
+        break;
+
+      // Postpone handling of exit command. Server side needs to be completed first.
+      case "%exit":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use '%exit'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+      
+      // Handle '%groupjoin <group_name>' to join a group.
+      case "%groupjoin":
+        if (commandLength != 2) {
+          System.out.println("Invalid command format. Please use '%groupjoin <group_name>'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+      
+      // Handle '%groupleave' to leave a group.
+      case "%groupleave":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use '%groupleave'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+      
+      // Handle '%help' to print help message.
+      case "%help":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use '%help'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+      
+      // Handle '%groups' to get list of groups.
+      case "%groups":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use '%groups'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+      
+      // Handle '%users' to get list of users.
+      case "%users":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use '%users'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+
+      default:
+        sendMessageToServer(fullMessageString);
     }
   }
 
@@ -82,6 +146,9 @@ public class Client {
     }).start();
   }
 
+  // Function to close the socket and buffer reader/writer
+  // Arguments: Socket socket, BufferedReader bufferedReader, BufferedWriter
+  // Returns: void
   private void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
     try {
       if (bufferedReader != null)
@@ -99,7 +166,7 @@ public class Client {
   // Arguments: String message
   // Returns: boolean
   private boolean isExitMessage(String message) {
-    return message.equals("exit");
+    return message.equals("%exit");
   }
 
   // Function to handle exit message. If the message is "exit", close the socket
@@ -107,39 +174,12 @@ public class Client {
   // Arguments: String message
   // Returns: void
   private void handleExitMessage(String message) {
-    if (message.equals("exit")) {
-      // Close getmessage thread
-      closeEverything(sock, buffRead, buffWrite);
-      System.exit(0);
-    } else {
-      return;
-    }
+    // Close getmessage thread
+    closeEverything(sock, buffRead, buffWrite);
+    System.exit(0);
   }
 
-  // Function to handle retrieve message. If the message is "message
-  // <message_id>",
-  private boolean isRetrieveMessage(String message) {
-    return message.split(" ")[0].equals("message");
-  }
-
-  // Function to check if the retrieve message is valid
-  // Arguments: String message
-  // Returns: boolean
-
-  private boolean isValidRetrieveMessage(String message) {
-    String[] splitCommand = message.split(" ");
-    if (splitCommand.length != 2) {
-      return false;
-    }
-
-    if (!isInteger(splitCommand[1])) {
-      return false;
-    }
-
-    return true;
-  }
-
-  private void handleretrieveMessage(String message) {
+  private void sendMessageToServer(String message) {
     try {
       buffWrite.write(message);
       buffWrite.newLine();
