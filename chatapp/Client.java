@@ -34,7 +34,7 @@ public class Client {
       buffWrite.flush();
 
       Scanner sysInScanner = new Scanner(System.in);
-      while (sock.isConnected()) {
+      while (!sock.isClosed()) {
         String messageToSend = sysInScanner.nextLine();
 
         handleClientCommand(messageToSend);
@@ -47,6 +47,7 @@ public class Client {
       }
     } catch (Exception e) {
       closeEverything(sock, buffRead, buffWrite);
+      Thread.currentThread().interrupt();
     }
   }
 
@@ -143,12 +144,16 @@ public class Client {
       public void run() {
         String messageFromChat;
 
-        while (sock.isConnected()) {
+        while (!sock.isClosed()) {
           try {
             messageFromChat = buffRead.readLine();
+            if (messageFromChat == null) {
+              throw new Exception("Connection closed.");
+            }
             System.out.println(messageFromChat);
           } catch (Exception e) {
             closeEverything(sock, buffRead, buffWrite);
+            Thread.currentThread().interrupt();
           }
         }
       }
@@ -195,7 +200,6 @@ public class Client {
       buffWrite.flush();
     } catch (Exception e) {
       closeEverything(sock, buffRead, buffWrite);
-      e.printStackTrace();
     }
   }
 
