@@ -281,19 +281,21 @@ public class ClientHandler implements Runnable {
       sendMessageToThisClient("You are not currently in this group");
       return;
     }
+    if (messageId < 0) {
+      sendMessageToThisClient("Message does not exist");
+      return;
+    }
     for (Group group : possibleGroups) {
       if (group.getGroupName().equals(groupName)) {
         ArrayList<Message> groupMsgList = group.getGroupMsgList();
-        if (messageId < 0) {
-          sendMessageToThisClient("Message does not exist");
-          return;
+
+        for (Message msg : groupMsgList) {
+          if (msg.getMessageId() == messageId) {
+            sendMessageToThisClient(groupName + " " + msg.toString());
+            return;
+          }
         }
-        try {
-          String message = groupMsgList.get(messageId).toString();
-          sendMessageToThisClient(groupName + " " + message.toString());
-        } catch (Exception e) {
-          sendMessageToThisClient("Message does not exist");
-        }
+        sendMessageToThisClient("Message does not exist");
         return;
       }
     }
