@@ -140,19 +140,22 @@ public class ClientHandler implements Runnable {
         sendMessageToThisClient("pong");
         break;
 
-      case "%message":
+      case "%groupmessage":
         // Find message per message id
         int messageId = Integer.parseInt(message.split(" ")[1]);
         sendMessageGivenId(messageId);
         break;
 
-      default:
+      case "%grouppost":
         if (!clientInGroup()) {
           sendMessageToThisClient("You are not in a group. Please join a group using %groupjoin <groupname>");
           break;
         }
         Message newMessage = addMessageToGroupMessageList(message);
         sendBroadcastMessage(newMessage.toStringNoContent());
+        break;
+
+      default:
         break;
     }
   }
@@ -293,8 +296,9 @@ public class ClientHandler implements Runnable {
     sendMessageToThisClient("%groupusers: List all users in group.");
     sendMessageToThisClient("%groupjoin <group_name>: Join a group.");
     sendMessageToThisClient("%groupleave: Leave current group.");
+    sendMessageToThisClient("%grouppost <message>: Post a message to group.");
+    sendMessageToThisClient("%groupmessage <id>: Retrieve message content given id");
     sendMessageToThisClient("%groups: List all groups.");
-    sendMessageToThisClient("%message <id>: Retrieve message content given id");
     sendMessageToThisClient("%ping: Check connection to server.");
     sendMessageToThisClient("%help: List all commands");
     sendMessageToThisClient("%exit: Exit the chat application");

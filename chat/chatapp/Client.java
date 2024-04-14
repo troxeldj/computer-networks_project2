@@ -61,7 +61,7 @@ public class Client {
     int commandLength = splitCommand.length;
 
     switch (command) {
-      case "%message":
+      case "%groupmessage":
         // Handle '%message <message_id>' to retrieve message from server.
         if (commandLength == 2 && isInteger(splitCommand[1])) {
           sendMessageToServer(fullMessageString);
@@ -92,6 +92,15 @@ public class Client {
       case "%groupleave":
         if (commandLength != 1) {
           System.out.println("Invalid command format. Please use '%groupleave'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+
+      // Handle '%grouppost <message>' to post a message to a group.
+      case "%grouppost":
+        if (commandLength < 2) {
+          System.out.println("Invalid command format. Please use '%grouppost <group_name> <message>'");
           break;
         }
         sendMessageToServer(fullMessageString);
@@ -134,7 +143,7 @@ public class Client {
         break;
 
       default:
-        sendMessageToServer(fullMessageString);
+        System.out.println("Invalid Command Provided. Use '%help' to get list of commands.");
     }
   }
 
