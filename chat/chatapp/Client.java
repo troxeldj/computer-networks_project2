@@ -61,19 +61,11 @@ public class Client {
     int commandLength = splitCommand.length;
 
     switch (command) {
-      case "%groupmessage":
-        // Handle '%message <message_id>' to retrieve message from server.
-        if (commandLength == 2 && isInteger(splitCommand[1])) {
-          sendMessageToServer(fullMessageString);
-        } else {
-          System.out.println("Invalid command format. Please use '%message <message_id>'");
-        }
-        break;
 
-      // Postpone handling of exit command. Server side needs to be completed first.
-      case "%exit":
-        if (commandLength != 1) {
-          System.out.println("Invalid command format. Please use '%exit'");
+      // Handle '%groupusers <group_name>' to get list of users in group.
+      case "%groupusers":
+        if (commandLength != 2) {
+          System.out.println("Invalid command format. Please use '%groupusers <group_name>'");
           break;
         }
         sendMessageToServer(fullMessageString);
@@ -90,7 +82,7 @@ public class Client {
 
       // Handle '%groupleave' to leave a group.
       case "%groupleave":
-        if (commandLength != 1) {
+        if (commandLength != 2) {
           System.out.println("Invalid command format. Please use '%groupleave'");
           break;
         }
@@ -106,6 +98,41 @@ public class Client {
         sendMessageToServer(fullMessageString);
         break;
 
+      case "%groupmessage":
+        // Handle '%message <group_name> <message_id>' to retrieve message from server.
+        if (commandLength == 3 && isInteger(splitCommand[2])) {
+          sendMessageToServer(fullMessageString);
+        } else {
+          System.out.println("Invalid command format. Please use '%groupmessage <group_name> <message_id>'");
+        }
+        break;
+
+      // Handle '%groups' to get list of groups.
+      case "%groups":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use '%groups'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+
+      // Handle '%mygroups' to get list of groups user is in.
+      case "%mygroups":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use '%mygroups'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+
+      case "ping":
+        if (commandLength != 1) {
+          System.out.println("Invalid command format. Please use 'ping'");
+          break;
+        }
+        sendMessageToServer(fullMessageString);
+        break;
+
       // Handle '%help' to print help message.
       case "%help":
         if (commandLength != 1) {
@@ -115,10 +142,10 @@ public class Client {
         sendMessageToServer(fullMessageString);
         break;
 
-      // Handle '%groups' to get list of groups.
-      case "%groups":
+      // Postpone handling of exit command. Server side needs to be completed first.
+      case "%exit":
         if (commandLength != 1) {
-          System.out.println("Invalid command format. Please use '%groups'");
+          System.out.println("Invalid command format. Please use '%exit'");
           break;
         }
         sendMessageToServer(fullMessageString);
@@ -133,21 +160,13 @@ public class Client {
         System.out.flush();
         break;
 
-      // Handle '%users' to get list of users.
-      case "%groupusers":
-        if (commandLength != 1) {
-          System.out.println("Invalid command format. Please use '%groupusers'");
-          break;
-        }
-        sendMessageToServer(fullMessageString);
-        break;
-
       default:
         System.out.println("Invalid Command Provided. Use '%help' to get list of commands.");
     }
   }
 
-  // Thread to listen for messages from the server. Runs while connection is not closed.
+  // Thread to listen for messages from the server. Runs while connection is not
+  // closed.
   public void listenForMessages() {
     new Thread(new Runnable() {
       @Override

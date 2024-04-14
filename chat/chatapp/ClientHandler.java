@@ -43,25 +43,37 @@ public class ClientHandler implements Runnable {
       clients.add(this);
 
       // Send a message to every client in group that a new client has joined
-      sendGroupJoinMessage();
+      for (String group : this.userObj.getGroupNames()) {
+        sendGroupJoinMessage(group);
+      }
     } catch (Exception e) {
       closeEverything(sock, buffRead, buffWrite);
     }
   }
 
   // Function to send broadcast message to all clients in the same group.
-  // Arguments: String message
+  // Arguments: String groupName, String message
   // Returns: void
-  private void sendBroadcastMessage(String message) {
+  private void sendBroadcastMessage(String groupName, String message) {
+    if (!clientInGroup()) {
+      return;
+    }
+    if (!isPossibleGroupName(groupName)) {
+      return;
+    }
     for (ClientHandler client : clients) {
-      if (client.userObj.getGroupName().equals(this.userObj.getGroupName())) {
+      ArrayList<String> clientGroupNames = client.getClientGroupNames();
+      if (clientGroupNames.contains(groupName)) {
         client.sendMessageToThisClient(message);
       }
     }
   }
 
-  private void sendGroupJoinMessage() {
-    sendBroadcastMessage(this.userObj.getUsername() + " has joined group " + this.userObj.getGroupName());
+  // Function to send message on user joining a group
+  // Arguments: String groupName
+  // Returns: void
+  private void sendGroupJoinMessage(String groupName) {
+    sendBroadcastMessage(groupName, this.userObj.getUsername() + " has joined group " + groupName);
   }
 
   // Function to send message to this client
@@ -97,62 +109,107 @@ public class ClientHandler implements Runnable {
   // Returns: void
   private void handleClientmessage(String message) {
     String commandString = message.split(" ")[0];
+    String groupName;
     switch (commandString) {
-      case "%exit":
-        removeClient();
-        closeEverything(sock, buffRead, buffWrite);
-        break;
-
       case "%groupusers":
-        if (!clientInGroup()) { // Client is not in group
-          sendMessageToThisClient("You are not in a group. Please join a group to see users.");
-          break;
-        } else { // Client is in group
-          sendMessageToThisClient(String.format("List of clients in group (%s):", getClientGroup()));
-          sendClientList();
+        groupName = message.split(" ")[1];
+
+        if (!clientInGroup()) {
+          sendMessageToThisClient("You are not in a group. Please join a group using %groupjoin <groupname>");
           break;
         }
+        if (!isPossibleGroupName(groupName)) {
+          sendMessageToThisClient("Group does not exist");
+          break;
+        }
+        if (!clientInThisGroup(groupName)) {
+          sendMessageToThisClient("You are not currently in this group");
+          break;
+        }
+        sendClientList(groupName);
+        break;
+
+      case "%groupjoin":
+        groupName = message.split(" ")[1];
+        if (!isPossibleGroupName(groupName)) {
+          sendMessageToThisClient("Group does not exist");
+          break;
+        }
+        if (clientInThisGroup(groupName)) {
+          sendMessageToThisClient("You are already in this group");
+          break;
+        }
+        this.userObj.joinGroup(groupName);
+        sendGroupJoinMessage(groupName);
+
+        // Send the last two messages to the client
+        sendLastTwoMessages(groupName);
+        break;
+
+      case "%groupleave":
+        groupName = message.split(" ")[1];
+        if (!clientInGroup()) {
+          sendMessageToThisClient("You are not in a group. Please join a group using %groupjoin <groupname>");
+          break;
+        }
+        if (!isPossibleGroupName(groupName)) {
+          sendMessageToThisClient("Group does not exist");
+          break;
+        }
+        this.userObj.leaveGroup(groupName);
+        sendBroadcastMessage(groupName, this.userObj.getUsername() + " has left the group");
+        break;
+
+      case "%grouppost":
+        groupName = message.split(" ")[1];
+        if (!clientInGroup()) {
+          sendMessageToThisClient("You are not in a group. Please join a group using %groupjoin <groupname>");
+          break;
+        }
+        if (!isPossibleGroupName(groupName)) {
+          sendMessageToThisClient("Group does not exist");
+          break;
+        }
+        if (!clientInThisGroup(groupName)) {
+          sendMessageToThisClient("You are not currently in this group");
+          break;
+        }
+        message = message.split(" ", 3)[2];
+        Message newMessage = addMessageToGroupMessageList(groupName, message);
+        sendBroadcastMessage(groupName, groupName + " " + newMessage.toStringNoContent());
+        break;
+
+      case "%groupmessage":
+        // Find message per message id
+        groupName = message.split(" ")[1];
+        int messageId = Integer.parseInt(message.split(" ")[2]);
+
+        sendMessageGivenId(groupName, messageId);
+        break;
 
       case "%groups":
         sendGroupNames();
         break;
 
-      case "%groupjoin":
-        String groupName = message.split(" ")[1];
-        if (!isValidGroup(groupName)) {
-          sendMessageToThisClient("Group does not exist");
-          break;
+      case "%mygroups":
+        sendMessageToThisClient("List of groups you are in:");
+        ArrayList<String> groupNames = this.userObj.getGroupNames();
+        for (String group : groupNames) {
+          sendMessageToThisClient(group);
         }
-        this.userObj.joinGroup(groupName);
-        sendGroupJoinMessage();
-        break;
-
-      case "%groupleave":
-        this.userObj.leaveGroup();
-        sendBroadcastMessage(this.userObj.getUsername() + " has left the group");
-        break;
-
-      case "%help":
-        sendHelpMessage();
         break;
 
       case "%ping":
         sendMessageToThisClient("pong");
         break;
 
-      case "%groupmessage":
-        // Find message per message id
-        int messageId = Integer.parseInt(message.split(" ")[1]);
-        sendMessageGivenId(messageId);
+      case "%help":
+        sendHelpMessage();
         break;
 
-      case "%grouppost":
-        if (!clientInGroup()) {
-          sendMessageToThisClient("You are not in a group. Please join a group using %groupjoin <groupname>");
-          break;
-        }
-        Message newMessage = addMessageToGroupMessageList(message);
-        sendBroadcastMessage(newMessage.toStringNoContent());
+      case "%exit":
+        removeClient();
+        closeEverything(sock, buffRead, buffWrite);
         break;
 
       default:
@@ -163,51 +220,40 @@ public class ClientHandler implements Runnable {
   // Function to add message to message list
   // Arguments: String message
   // Returns: Message
-  private Message addMessageToGroupMessageList(String message) {
+  private Message addMessageToGroupMessageList(String groupName, String message) {
     Message newMessage = new Message(this.userObj.getUsername(), message);
     for (Group group : possibleGroups) {
-      if (group.getGroupName().equals(this.userObj.getGroupName())) {
+      if (group.getGroupName().equals(groupName)) {
         group.addMessage(newMessage);
+        return newMessage;
       }
     }
     return newMessage;
-  }
-
-  // Returns the client group
-  // Arguments: None
-  // Returns: String
-  private String getClientGroup() {
-    return this.userObj.getGroupName();
   }
 
   // Function to check if client is in a group
   // Arguments: None
   // Returns: boolean
   private boolean clientInGroup() {
-    return this.userObj.getGroupName() != "";
+    return this.userObj.getGroupNames().size() > 0;
   }
 
-  // Function to check if group is valid (if it exists)
-  // Arguments: None
+  // Function to check if client is in a specific group
+  // Arguments: String groupName
   // Returns: boolean
-  private boolean isValidGroup(String groupName) {
-    for (Group group : possibleGroups) {
-      if (group.getGroupName().equals(groupName)) {
-        return true;
-      }
-    }
-    return false;
+  private boolean clientInThisGroup(String groupName) {
+    return this.userObj.getGroupNames().contains(groupName);
   }
 
   // Function to send client list to current client
   // Arguments: None
   // Returns: void
-  private void sendClientList() {
+  private void sendClientList(String groupName) {
+    sendMessageToThisClient("List of clients in group:");
     for (ClientHandler client : clients) {
-      if (client.userObj.getGroupName().equals(this.userObj.getGroupName())) {
+      ArrayList<String> clientGroupNames = client.getClientGroupNames();
+      if (clientGroupNames.contains(groupName)) {
         sendMessageToThisClient(client.userObj.getUsername());
-      } else {
-        continue;
       }
     }
   }
@@ -216,61 +262,76 @@ public class ClientHandler implements Runnable {
   // Arguments: None
   // Returns: void
   private void removeClient() {
-    sendBroadcastMessage(this.userObj.getUsername() + " has left the chat");
+    for (String group : this.userObj.getGroupNames()) {
+      sendBroadcastMessage(group, this.userObj.getUsername() + " has left the group");
+    }
     clients.remove(this);
   }
 
-  private void sendMessageGivenId(int messageId) {
+  private void sendMessageGivenId(String groupName, int messageId) {
+    if (!clientInGroup()) {
+      sendMessageToThisClient("You are not in a group. Please join a group using %groupjoin <groupname>");
+      return;
+    }
+    if (!isPossibleGroupName(groupName)) {
+      sendMessageToThisClient("Group does not exist");
+      return;
+    }
+    if (!clientInThisGroup(groupName)) {
+      sendMessageToThisClient("You are not currently in this group");
+      return;
+    }
     for (Group group : possibleGroups) {
-      if (group.getGroupName().equals(this.userObj.getGroupName())) {
+      if (group.getGroupName().equals(groupName)) {
         ArrayList<Message> groupMsgList = group.getGroupMsgList();
-        for (Message message : groupMsgList) {
-          if (message.getMessageId() == messageId) {
-            sendMessageToThisClient(message.toString());
-            return;
-          }
+        if (messageId < 0) {
+          sendMessageToThisClient("Message does not exist");
+          return;
         }
+        try {
+          String message = groupMsgList.get(messageId).toString();
+          sendMessageToThisClient(groupName + " " + message.toString());
+        } catch (Exception e) {
+          sendMessageToThisClient("Message does not exist");
+        }
+        return;
       }
     }
-    sendMessageToThisClient("Message not found");
   }
 
   // Function to get the last two messages to send on client connection
-  private ArrayList<Message> getLastTwoMessages() {
-    ArrayList<Message> lastTwoMessages = new ArrayList<>();
+  private ArrayList<Message> getLastTwoMessages(String groupName) {
     for (Group group : possibleGroups) {
-      if (group.getGroupName().equals(this.userObj.getGroupName())) {
+      if (group.getGroupName().equals(groupName)) {
         ArrayList<Message> groupMsgList = group.getGroupMsgList();
-        int groupMsgListSize = group.getGroupMsgListSize();
+        int groupMsgListSize = groupMsgList.size();
         if (groupMsgListSize == 0) {
-          return lastTwoMessages;
+          return new ArrayList<Message>();
         }
         if (groupMsgListSize == 1) {
-          lastTwoMessages.add(groupMsgList.get(0));
-          return lastTwoMessages;
+          return new ArrayList<Message>(groupMsgList.subList(0, 1));
         }
-        lastTwoMessages.add(groupMsgList.get(groupMsgListSize - 2));
-        lastTwoMessages.add(groupMsgList.get(groupMsgListSize - 1));
-        return lastTwoMessages;
+        return new ArrayList<Message>(groupMsgList.subList(groupMsgListSize - 2, groupMsgListSize));
       }
     }
-    return lastTwoMessages;
+    return new ArrayList<Message>();
   }
 
   // Function to send the last two messages to the client.
   // Arguments: None
   // Returns: void
-  private void sendLastTwoMessages() {
-    ArrayList<Message> lastTwoMessages = getLastTwoMessages();
-    for (Message message : lastTwoMessages) {
-      sendMessageToThisClient(message.toStringNoContent());
+  private void sendLastTwoMessages(String groupName) {
+    ArrayList<Message> lastTwoMessages = getLastTwoMessages(groupName);
+    // Print messages in reverse order
+    for (int i = lastTwoMessages.size() - 1; i >= 0; i--) {
+      sendMessageToThisClient(groupName + " " + lastTwoMessages.get(i).toStringNoContent());
     }
   }
 
   // Function to get group names
   // Arguments: None
   // Returns: String[]
-  private String[] getGroupNames() {
+  private String[] getPossibleGroupNames() {
     String[] groupNames = new String[possibleGroups.length];
     for (int i = 0; i < possibleGroups.length; i++) {
       groupNames[i] = possibleGroups[i].getGroupName();
@@ -278,12 +339,25 @@ public class ClientHandler implements Runnable {
     return groupNames;
   }
 
+  private ArrayList<String> getClientGroupNames() {
+    return this.userObj.getGroupNames();
+  }
+
+  private boolean isPossibleGroupName(String groupName) {
+    for (String possibleGroupName : getPossibleGroupNames()) {
+      if (possibleGroupName.equals(groupName)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Function to send group names to the client
   // Arguments: None
   // Returns: void
   private void sendGroupNames() {
     sendMessageToThisClient("List of groups:");
-    for (String groupName : getGroupNames()) {
+    for (String groupName : getPossibleGroupNames()) {
       sendMessageToThisClient(groupName);
     }
   }
@@ -293,12 +367,13 @@ public class ClientHandler implements Runnable {
   // Returns: void
   private void sendHelpMessage() {
     sendMessageToThisClient("List of commands:");
-    sendMessageToThisClient("%groupusers: List all users in group.");
+    sendMessageToThisClient("%groupusers <group_name>: List all users in group.");
     sendMessageToThisClient("%groupjoin <group_name>: Join a group.");
-    sendMessageToThisClient("%groupleave: Leave current group.");
-    sendMessageToThisClient("%grouppost <message>: Post a message to group.");
-    sendMessageToThisClient("%groupmessage <id>: Retrieve message content given id");
+    sendMessageToThisClient("%groupleave <group_name>: Leave current group.");
+    sendMessageToThisClient("%grouppost <group_name> <message>: Post a message to group.");
+    sendMessageToThisClient("%groupmessage <group_name> <id>: Retrieve message content given id");
     sendMessageToThisClient("%groups: List all groups.");
+    sendMessageToThisClient("%mygroups: List all groups you are in.");
     sendMessageToThisClient("%ping: Check connection to server.");
     sendMessageToThisClient("%help: List all commands");
     sendMessageToThisClient("%exit: Exit the chat application");
@@ -312,7 +387,9 @@ public class ClientHandler implements Runnable {
     String clientMessage;
 
     // Send the last two messages to the client
-    sendLastTwoMessages();
+    for (String group : this.userObj.getGroupNames()) {
+      sendLastTwoMessages(group);
+    }
 
     while (!sock.isClosed()) {
       try {
