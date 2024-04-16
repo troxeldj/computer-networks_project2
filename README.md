@@ -1,5 +1,7 @@
 # Computer Networks (CS4065) Project 2
 
+This is a multi-threaded client-server chat application. This application currently only allows for one server and N number of clients.
+
 ## Members:
 - Dillon Troxell
 - Ben Sabo 
