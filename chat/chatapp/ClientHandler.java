@@ -17,8 +17,9 @@ public class ClientHandler implements Runnable {
 
   // Static variables
   public static ArrayList<ClientHandler> clients = new ArrayList<>(); // List of clients
-  public static Group[] possibleGroups = { new Group("general"), new Group("gaming"), new Group("programming") }; // List
-                                                                                                                  // of
+  public static Group[] possibleGroups = { new Group("general"), new Group("gaming"), new Group("programming"),
+      new Group("study"), new Group("sports") }; // List
+  // of
   // groups
   private Socket sock;
   private BufferedReader buffRead;
@@ -388,8 +389,14 @@ public class ClientHandler implements Runnable {
   public void run() {
     String clientMessage;
 
+    // Print group names
+    sendMessageToThisClient("Group Names:");
+    for (String group : getPossibleGroupNames()) {
+      sendMessageToThisClient(group);
+    }
+
     // Send the last two messages to the client
-    for (String group : this.userObj.getGroupNames()) {
+    for(String group: this.userObj.getGroupNames()) {
       sendLastTwoMessages(group);
     }
 
